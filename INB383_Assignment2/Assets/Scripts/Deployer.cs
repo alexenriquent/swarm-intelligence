@@ -5,12 +5,12 @@ public class Deployer : MonoBehaviour {
 
     public Transform fishBoid;
     public Transform sharkBoid;
-    float magnitude = 10.0f;
 
     const int numFishes = 15;
     const int numSharks = 5;
     const float minRange = 5.0f;
     const float maxRange = 15.0f;
+    const float magnitude = 10.0f;
 
 	void Start() {
 	    DeployFishBoids();

@@ -11,10 +11,16 @@ public class SharkBoid : Boid {
     private float hungerDuration;
     private float stepMagnitude;
 
+    const string sharkTag = "SharkBoid";
+    const string activeFishTag = "FishBoid";
+    const string inactiveFishTag = "Inactive";
+    const int maxHunger = 3;
+    const int timeToHungry = 10;
+
     protected override void Initialise() {
         boids = null;
         boidIndex = 0;
-        cohesionPosition = new Vector3(0.0f, 0.0f, 0.0f);
+        cohesionPosition = Vector3.zero;
         swimFource = 0.8f;
         fishIndex = 0;
         isHungry = true;
@@ -39,9 +45,9 @@ public class SharkBoid : Boid {
     }
 
     void OnTriggerEnter(Collider other) {
-        if (other.gameObject.tag == "FishBoid" && isHungry) {
-            hunger = hunger + 1;
-            other.gameObject.tag = "Inactive";
+        if (other.gameObject.tag == activeFishTag && isHungry) {
+            hunger++;
+            other.gameObject.tag = inactiveFishTag;
             hungerDuration = Time.time;
         }
     }
@@ -51,20 +57,20 @@ public class SharkBoid : Boid {
     }
 
     private void GetBoids() {
-        boids = GameObject.FindGameObjectsWithTag("SharkBoid");
-        fishBoids = GameObject.FindGameObjectsWithTag("FishBoid");
+        boids = GameObject.FindGameObjectsWithTag(sharkTag);
+        fishBoids = GameObject.FindGameObjectsWithTag(activeFishTag);
     } 
 
     private void CheckHungerStatus() {
-        if (Time.time % 10 == 0) {
-            hunger = hunger - 1;
+        if (Time.time % timeToHungry == 0) {
+            hunger--;
         }
-        if (hunger >= 3) {
+        if (hunger >= maxHunger) {
             isHungry = false;
             Color colour = new Color(0.557f, 0.580f, 0.580f, 1.0f);
             gameObject.GetComponent<Renderer>().material.color = colour;
             if (Time.time > hungerDuration + 5.0f) {
-                hunger = hunger - 2;
+                hunger -= 2;
             }
         } else {
             isHungry = true;
@@ -98,7 +104,7 @@ public class SharkBoid : Boid {
                                   * (cohesionPosition - transform.position);
             GetComponent<Rigidbody>().AddForce(cohesiveForce);
             boidIndex = 0;
-            cohesionPosition.Set(0.0f, 0.0f, 0.0f);
+            cohesionPosition = Vector3.zero;
         }
     }
 
@@ -115,13 +121,13 @@ public class SharkBoid : Boid {
     }
 
     private void Prey() {
-        float preyDistance = 1000.0f;
+        float preyDistance = maxDistance;
         Vector3 preyPosition = simulationCentre;
         Vector3 fishPosition;
 
         for (int i = 0; i < fishBoids.Length; i++) {
             if (Vector3.Distance(fishBoids[i].transform.position, transform.position) < preyDistance &&
-                fishBoids[i].tag == "FishBoid") {
+                fishBoids[i].tag == activeFishTag) {
                 preyDistance = Vector3.Distance(fishBoids[i].transform.position, transform.position);
                 preyPosition = fishBoids[i].transform.position;
             }

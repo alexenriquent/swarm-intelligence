@@ -10,10 +10,14 @@ public class FishBoid : Boid {
     private float inactiveDuration;
     private float stepMagnitude;
 
+    const string sharkTag = "SharkBoid";
+    const string activeFishTag = "FishBoid";
+    const string inactiveFishTag = "Inactive";
+
     protected override void Initialise() {
         boids = null;
         boidIndex = 0;
-        cohesionPosition = new Vector3(0.0f, 0.0f, 0.0f);
+        cohesionPosition = Vector3.zero;
         safeDistance = 10.0f;
         swimForce = 0.3f;
         sharkBoids = null;
@@ -38,7 +42,7 @@ public class FishBoid : Boid {
     }
 
     void OnTriggerEnter(Collider other) {
-        if (gameObject.tag == "FishBoid" && other.gameObject.tag == "SharkBoid") {
+        if (gameObject.tag == activeFishTag && other.gameObject.tag == sharkTag) {
             inactiveDuration = Time.time;
         }
     }
@@ -48,17 +52,17 @@ public class FishBoid : Boid {
     }
 
     private void GetBoids() {
-        boids = GameObject.FindGameObjectsWithTag("FishBoid");
-        sharkBoids = GameObject.FindGameObjectsWithTag("SharkBoid");
+        boids = GameObject.FindGameObjectsWithTag(activeFishTag);
+        sharkBoids = GameObject.FindGameObjectsWithTag(sharkTag);
     }
 
     private void CheckBoidStatus() {
-        if (gameObject.tag == "Inactive") {
-            gameObject.GetComponent<Rigidbody>().velocity = new Vector3(0.0f, 0.0f, 0.0f);
+        if (gameObject.tag == inactiveFishTag) {
+            gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
             Color colour = gameObject.GetComponent<Renderer>().material.color;
             colour.a = 0.1f;
             if (Time.time > inactiveDuration + 10.0f) {
-                gameObject.tag = "FishBoid";
+                gameObject.tag = activeFishTag;
                 colour.a = 1.0f;
             }
             gameObject.GetComponent<Renderer>().material.color = colour;
@@ -84,7 +88,7 @@ public class FishBoid : Boid {
                                   * (cohesionPosition - transform.position);
             GetComponent<Rigidbody>().AddForce(cohesiveForce);
             boidIndex = 0;
-            cohesionPosition.Set(0.0f, 0.0f, 0.0f);
+            cohesionPosition = Vector3.zero;
         }
     }
 
@@ -100,7 +104,7 @@ public class FishBoid : Boid {
         Quaternion rotation = boids[boidIndex].transform.rotation;
         float distance = Vector3.Distance(transform.position, position);
         Vector3 predatorPosition = simulationCentre;
-        float predatorDistance = 1000.0f;
+        float predatorDistance = maxDistance;
 
         for (int i = 0; i < sharkBoids.Length; i++) {
             if (Vector3.Distance(sharkBoids[i].transform.position, transform.position) < predatorDistance) {
@@ -109,9 +113,9 @@ public class FishBoid : Boid {
             }
         }
 
-        if (gameObject.tag == "FishBoid" && safeDistance / predatorDistance > 1) {
+        if (gameObject.tag == activeFishTag && safeDistance / predatorDistance > 1) {
             Flee(predatorPosition, predatorDistance);
-        } else if (gameObject.tag == "FishBoid" && distance > 0.0f) {
+        } else if (gameObject.tag == activeFishTag && distance > 0.0f) {
             Swim(position, rotation, distance);
         }
     }
@@ -150,5 +154,4 @@ public class FishBoid : Boid {
         transform.rotation = Quaternion.RotateTowards(transform.rotation, wanderRotation, 2.0f);
         GetComponent<Rigidbody>().AddForce(transform.forward);
     }
-
 }
