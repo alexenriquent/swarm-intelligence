@@ -18,6 +18,7 @@ abstract public class Boid : MonoBehaviour {
 
     protected const float minRange = -360.0f;
     protected const float maxRange = 360.0f;
+    protected const float maxDuration = 100000000.0f;
 
     protected abstract void Initialise();
     protected abstract void BoidUpdate();

@@ -19,16 +19,16 @@ public class SharkBoid : Boid {
         fishIndex = 0;
         isHungry = true;
         hunger = 0;
-        hungerDuration = 100000000.0f;
+        hungerDuration = maxDuration;
         stepMagnitude = 5.0f;
     }
 
     protected override void BoidUpdate() {
-        if (boids == null || fishBoids == null) {
+        if (NoBoid()) {
             GetBoids();
         } else {
             CheckHungerStatus();
-            if (Vector3.Distance(simulationCentre, transform.position) > simulationRadius) {
+            if (Escape()) {
                 SetNewDirection(stepMagnitude);
                 return;
             }
@@ -44,6 +44,10 @@ public class SharkBoid : Boid {
             other.gameObject.tag = "Inactive";
             hungerDuration = Time.time;
         }
+    }
+
+    private bool NoBoid() {
+        return boids == null || fishBoids == null;
     }
 
     private void GetBoids() {
@@ -66,6 +70,11 @@ public class SharkBoid : Boid {
             isHungry = true;
         }
     }
+
+    private bool Escape() {
+        return Vector3.Distance(simulationCentre, transform.position) > simulationRadius;
+    }
+
 
     private void SetNewDirection(float magnitude) {
         float step = magnitude * Time.deltaTime;
@@ -99,40 +108,52 @@ public class SharkBoid : Boid {
         float distance = Vector3.Distance(transform.position, position);
 
         if (isHungry) {
-            float preyDistance = 1000.0f;
-            Vector3 preyPosition = simulationCentre;
-            Vector3 fishPosition;
-
-            for (int i = 0; i < fishBoids.Length; i++) {
-                if (Vector3.Distance(fishBoids[i].transform.position, transform.position) < preyDistance &&
-                    fishBoids[i].tag == "FishBoid") {
-                    preyDistance = Vector3.Distance(fishBoids[i].transform.position, transform.position);
-                    preyPosition = fishBoids[i].transform.position;
-                }
-            }
-
-            fishPosition = preyPosition + preyDistance * fishBoids[fishIndex].GetComponent<Rigidbody>().velocity;
-            GetComponent<Rigidbody>().AddForce((fishPosition - transform.position) * swimFource);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, 
-                                     Quaternion.LookRotation(fishPosition - transform.position), 7.0f);
-            gameObject.GetComponent<Renderer>().material.color = Color.red;
+            Prey();
         } else if (isHungry == false && distance > 0.0f) {
-            if (distance <= separationDistance) {
-                float scale = separationStrength / distance;
-                GetComponent<Rigidbody>().AddForce(scale * Vector3.Normalize(transform.position - position));
-            } else if (distance <= cohesionDistance && distance > separationDistance) {
-                cohesionPosition = cohesionPosition + position * (1.0f / (float) boids.Length);
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, 1.0f);
-                GetComponent<Rigidbody>().AddForce(transform.forward);
-            } else {
-                Vector3 randomTarget = new Vector3(Random.Range(minRange, maxRange), 
-                                                   Random.Range(minRange, maxRange), 
-                                                   Random.Range(minRange, maxRange));
-                Vector3 wanderVariation = randomTarget + marker.position;
-                Quaternion wanderRotation = Quaternion.LookRotation(wanderVariation);
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, wanderRotation, 2.0f);
-                GetComponent<Rigidbody>().AddForce(transform.forward * 2.0f);
-            }       
+            Swim(position, rotation, distance);     
         } 
+    }
+
+    private void Prey() {
+        float preyDistance = 1000.0f;
+        Vector3 preyPosition = simulationCentre;
+        Vector3 fishPosition;
+
+        for (int i = 0; i < fishBoids.Length; i++) {
+            if (Vector3.Distance(fishBoids[i].transform.position, transform.position) < preyDistance &&
+                fishBoids[i].tag == "FishBoid") {
+                preyDistance = Vector3.Distance(fishBoids[i].transform.position, transform.position);
+                preyPosition = fishBoids[i].transform.position;
+            }
+        }
+
+        fishPosition = preyPosition + preyDistance * fishBoids[fishIndex].GetComponent<Rigidbody>().velocity;
+        GetComponent<Rigidbody>().AddForce((fishPosition - transform.position) * swimFource);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, 
+                             Quaternion.LookRotation(fishPosition - transform.position), 7.0f);
+        gameObject.GetComponent<Renderer>().material.color = Color.red;
+    }
+
+    private void Swim(Vector3 position, Quaternion rotation, float distance) {
+        if (distance <= separationDistance) {
+            float scale = separationStrength / distance;
+            GetComponent<Rigidbody>().AddForce(scale * Vector3.Normalize(transform.position - position));
+        } else if (distance <= cohesionDistance && distance > separationDistance) {
+            cohesionPosition = cohesionPosition + position * (1.0f / (float) boids.Length);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, 1.0f);
+            GetComponent<Rigidbody>().AddForce(transform.forward);
+        } else {
+            Wander();
+        }   
+    }
+
+    private void Wander() {
+        Vector3 randomTarget = new Vector3(Random.Range(minRange, maxRange), 
+                                           Random.Range(minRange, maxRange), 
+                                           Random.Range(minRange, maxRange));
+        Vector3 wanderVariation = randomTarget + marker.position;
+        Quaternion wanderRotation = Quaternion.LookRotation(wanderVariation);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, wanderRotation, 2.0f);
+        GetComponent<Rigidbody>().AddForce(transform.forward * 2.0f);
     }
 }

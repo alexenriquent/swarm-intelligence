@@ -18,16 +18,16 @@ public class FishBoid : Boid {
         swimForce = 0.3f;
         sharkBoids = null;
         sharkIndex = 0;
-        inactiveDuration = 100000000.0f;
+        inactiveDuration = maxDuration;
         stepMagnitude = 10.0f;
     }
 
     protected override void BoidUpdate() {
-        if (boids == null || sharkBoids == null) {
+        if (NoBoid()) {
             GetBoids();
         } else {
             CheckBoidStatus();
-            if (Vector3.Distance(simulationCentre, transform.position) > simulationRadius) {
+            if (Escape()) {
                 SetNewDirection(stepMagnitude);
                 return;
             }
@@ -41,6 +41,10 @@ public class FishBoid : Boid {
         if (gameObject.tag == "FishBoid" && other.gameObject.tag == "SharkBoid") {
             inactiveDuration = Time.time;
         }
+    }
+
+    private bool NoBoid() {
+        return  boids == null || sharkBoids == null;
     }
 
     private void GetBoids() {
@@ -59,6 +63,10 @@ public class FishBoid : Boid {
             }
             gameObject.GetComponent<Renderer>().material.color = colour;
         }
+    }
+
+    private bool Escape() {
+        return Vector3.Distance(simulationCentre, transform.position) > simulationRadius;
     }
 
     private void SetNewDirection(float magnitude) {
@@ -88,7 +96,6 @@ public class FishBoid : Boid {
     }
 
     private void InvokeAction() {
-
         Vector3 position = boids[boidIndex].transform.position;
         Quaternion rotation = boids[boidIndex].transform.rotation;
         float distance = Vector3.Distance(transform.position, position);
@@ -103,33 +110,45 @@ public class FishBoid : Boid {
         }
 
         if (gameObject.tag == "FishBoid" && safeDistance / predatorDistance > 1) {
-            Vector3 sharkPosition;
-            gameObject.GetComponent<Renderer>().material.color = Color.yellow;
-            sharkPosition = predatorPosition + predatorDistance 
-                            * sharkBoids[sharkIndex].GetComponent<Rigidbody>().velocity;
-            GetComponent<Rigidbody>().AddForce((transform.position - sharkPosition) * swimForce);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, 
-                                Quaternion.LookRotation(transform.position - sharkPosition), 7.0f);
+            Flee(predatorPosition, predatorDistance);
         } else if (gameObject.tag == "FishBoid" && distance > 0.0f) {
-            Color colour = new Color(0.482f, 0.624f, 1.0f, 1.0f);
-            gameObject.GetComponent<Renderer>().material.color = colour;
-            if (distance < separationDistance) {
-                float scale = separationStrength / distance;
-                GetComponent<Rigidbody>().AddForce(scale * Vector3.Normalize(transform.position - position));
-            } else if (distance <= cohesionDistance && distance > separationDistance) {
-                cohesionPosition = cohesionPosition + position * (1.0f / (float) boids.Length);
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, 1.0f);
-                GetComponent<Rigidbody>().AddForce(transform.forward);
-            } else {
-                Vector3 randomTarget = new Vector3(Random.Range(minRange, maxRange), 
-                                                    Random.Range(minRange, maxRange), 
-                                                    Random.Range(minRange, maxRange));
-                Vector3 wanderVariation = randomTarget + marker.position;
-                Quaternion wanderRotation = Quaternion.LookRotation(wanderVariation);
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, wanderRotation, 2.0f);
-                GetComponent<Rigidbody>().AddForce(transform.forward);
-            }
+            Swim(position, rotation, distance);
         }
+    }
+
+    private void Flee(Vector3 predatorPosition, float predatorDistance) {
+        Vector3 sharkPosition;
+        gameObject.GetComponent<Renderer>().material.color = Color.yellow;
+        sharkPosition = predatorPosition + predatorDistance 
+                        * sharkBoids[sharkIndex].GetComponent<Rigidbody>().velocity;
+        GetComponent<Rigidbody>().AddForce((transform.position - sharkPosition) * swimForce);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, 
+                             Quaternion.LookRotation(transform.position - sharkPosition), 7.0f);
+    }
+
+    private void Swim(Vector3 position, Quaternion rotation, float distance) {
+        Color colour = new Color(0.482f, 0.624f, 1.0f, 1.0f);
+        gameObject.GetComponent<Renderer>().material.color = colour;
+        if (distance < separationDistance) {
+            float scale = separationStrength / distance;
+            GetComponent<Rigidbody>().AddForce(scale * Vector3.Normalize(transform.position - position));
+        } else if (distance <= cohesionDistance && distance > separationDistance) {
+            cohesionPosition = cohesionPosition + position * (1.0f / (float) boids.Length);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, 1.0f);
+            GetComponent<Rigidbody>().AddForce(transform.forward);
+        } else {
+            Wander();
+        }    
+    }
+
+    private void Wander() {
+        Vector3 randomTarget = new Vector3(Random.Range(minRange, maxRange), 
+                                           Random.Range(minRange, maxRange), 
+                                           Random.Range(minRange, maxRange));
+        Vector3 wanderVariation = randomTarget + marker.position;
+        Quaternion wanderRotation = Quaternion.LookRotation(wanderVariation);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, wanderRotation, 2.0f);
+        GetComponent<Rigidbody>().AddForce(transform.forward);
     }
 
 }
