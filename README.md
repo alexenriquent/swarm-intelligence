@@ -1,7 +1,7 @@
 ## Swarm Intelligence: The Predator versus Prey Simulation
 
 The simulator comprises of the following components:
-* Fifteen fish: represented by small spheroids. 
+* Fifteen fishes: represented by small spheroids. 
     * These are physical objects.
     * Have a buoyancy (they can sit suspended in space)
     * Each fish will have a maximum swim radius of 20 meters.
