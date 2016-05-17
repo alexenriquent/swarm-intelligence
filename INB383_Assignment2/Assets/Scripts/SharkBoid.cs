@@ -3,30 +3,35 @@ using System.Collections;
 
 public class SharkBoid : Boid {
 
-    public float swimFource;
+    public float swimForce;
+    private float moveForce;
+    private float preyForce;
     private GameObject[] fishBoids;
     private int fishIndex;
-    private int hunger;
-    private bool isHungry;
+    private int appetite;
+    private bool hungry;
     private float hungerDuration;
-    private float stepMagnitude;
 
-    const string sharkTag = "SharkBoid";
-    const string activeFishTag = "FishBoid";
-    const string inactiveFishTag = "Inactive";
-    const int maxHunger = 3;
-    const int timeToHungry = 10;
+    private const string sharkTag = "SharkBoid";
+    private const string activeFishTag = "FishBoid";
+    private const string inactiveFishTag = "Inactive";
+    private const float stepMagnitude = 5.0f;
+    private const int maxAppetite = 3;
+    private const int timeToHungry = 10;
+    private const int decayValue = 1;
+    private const float extension = 5.0f;
 
     protected override void Initialise() {
         boids = null;
         boidIndex = 0;
         cohesionPosition = Vector3.zero;
-        swimFource = 0.8f;
+        swimForce = 0.8f;
+        moveForce = 2.0f;
+        preyForce = 7.0f;
         fishIndex = 0;
-        isHungry = true;
-        hunger = 0;
+        hungry = true;
+        appetite = 0;
         hungerDuration = maxDuration;
-        stepMagnitude = 5.0f;
     }
 
     protected override void BoidUpdate() {
@@ -45,8 +50,8 @@ public class SharkBoid : Boid {
     }
 
     void OnTriggerEnter(Collider other) {
-        if (other.gameObject.tag == activeFishTag && isHungry) {
-            hunger++;
+        if (other.gameObject.tag == activeFishTag && hungry) {
+            TopUp();
             other.gameObject.tag = inactiveFishTag;
             hungerDuration = Time.time;
         }
@@ -63,31 +68,30 @@ public class SharkBoid : Boid {
 
     private void CheckHungerStatus() {
         if (Time.time % timeToHungry == 0) {
-            hunger--;
+            Decay(decayValue);
         }
-        if (hunger >= maxHunger) {
-            isHungry = false;
+        if (appetite >= maxAppetite) {
+            hungry = false;
             Color colour = new Color(0.557f, 0.580f, 0.580f, 1.0f);
             gameObject.GetComponent<Renderer>().material.color = colour;
-            if (Time.time > hungerDuration + 5.0f) {
-                hunger -= 2;
+            if (Time.time > hungerDuration + extension) {
+                Decay(decayValue + 1);
             }
         } else {
-            isHungry = true;
+            hungry = true;
         }
+    }
+
+    private void TopUp() {
+        appetite++;
+    }
+
+    private void Decay(int decayValue) {
+        appetite -= decayValue;
     }
 
     private bool Escape() {
         return Vector3.Distance(simulationCentre, transform.position) > simulationRadius;
-    }
-
-
-    private void SetNewDirection(float magnitude) {
-        float step = magnitude * Time.deltaTime;
-        Vector3 target = simulationCentre - transform.position;
-        Vector3 direction = Vector3.RotateTowards(transform.forward, target, step, 0.0f);
-        transform.rotation = Quaternion.LookRotation(direction);
-        transform.position = Vector3.MoveTowards(transform.position, simulationCentre, step);
     }
 
     private void IncrementFishIndex() {
@@ -97,25 +101,14 @@ public class SharkBoid : Boid {
         }
     }
 
-    private void IncrementBoidIndex() {
-        boidIndex++;
-        if (boidIndex >= boids.Length) {
-            Vector3 cohesiveForce = (cohesionStrength / Vector3.Distance(cohesionPosition, transform.position)) 
-                                  * (cohesionPosition - transform.position);
-            GetComponent<Rigidbody>().AddForce(cohesiveForce);
-            boidIndex = 0;
-            cohesionPosition = Vector3.zero;
-        }
-    }
-
     private void InvokeAction() {
         Vector3 position = boids[boidIndex].transform.position;
         Quaternion rotation = boids[boidIndex].transform.rotation;
         float distance = Vector3.Distance(transform.position, position);
 
-        if (isHungry) {
+        if (hungry) {
             Prey();
-        } else if (isHungry == false && distance > 0.0f) {
+        } else if (hungry == false && distance > 0.0f) {
             Swim(position, rotation, distance);     
         } 
     }
@@ -134,9 +127,9 @@ public class SharkBoid : Boid {
         }
 
         fishPosition = preyPosition + preyDistance * fishBoids[fishIndex].GetComponent<Rigidbody>().velocity;
-        GetComponent<Rigidbody>().AddForce((fishPosition - transform.position) * swimFource);
+        GetComponent<Rigidbody>().AddForce((fishPosition - transform.position) * swimForce);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, 
-                             Quaternion.LookRotation(fishPosition - transform.position), 7.0f);
+                             Quaternion.LookRotation(fishPosition - transform.position), preyForce);
         gameObject.GetComponent<Renderer>().material.color = Color.red;
     }
 
@@ -149,17 +142,7 @@ public class SharkBoid : Boid {
             transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, 1.0f);
             GetComponent<Rigidbody>().AddForce(transform.forward);
         } else {
-            Wander();
+            MoveForward(moveForce);
         }   
-    }
-
-    private void Wander() {
-        Vector3 randomTarget = new Vector3(Random.Range(minRange, maxRange), 
-                                           Random.Range(minRange, maxRange), 
-                                           Random.Range(minRange, maxRange));
-        Vector3 wanderVariation = randomTarget + marker.position;
-        Quaternion wanderRotation = Quaternion.LookRotation(wanderVariation);
-        transform.rotation = Quaternion.RotateTowards(transform.rotation, wanderRotation, 2.0f);
-        GetComponent<Rigidbody>().AddForce(transform.forward * 2.0f);
     }
 }

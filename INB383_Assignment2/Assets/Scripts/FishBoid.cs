@@ -5,14 +5,17 @@ public class FishBoid : Boid {
 
     public float safeDistance;
     public float swimForce;
+    private float moveForce;
+    private float fleeForce;
     private GameObject[] sharkBoids;
     private int sharkIndex;
     private float inactiveDuration;
-    private float stepMagnitude;
 
-    const string sharkTag = "SharkBoid";
-    const string activeFishTag = "FishBoid";
-    const string inactiveFishTag = "Inactive";
+    private const string sharkTag = "SharkBoid";
+    private const string activeFishTag = "FishBoid";
+    private const string inactiveFishTag = "Inactive";
+    private const float stepMagnitude = 10.0f;
+    private const float extension = 10.0f;
 
     protected override void Initialise() {
         boids = null;
@@ -20,10 +23,11 @@ public class FishBoid : Boid {
         cohesionPosition = Vector3.zero;
         safeDistance = 10.0f;
         swimForce = 0.3f;
+        moveForce = 1.0f;
+        fleeForce = 7.0f;
         sharkBoids = null;
         sharkIndex = 0;
         inactiveDuration = maxDuration;
-        stepMagnitude = 10.0f;
     }
 
     protected override void BoidUpdate() {
@@ -61,7 +65,7 @@ public class FishBoid : Boid {
             gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
             Color colour = gameObject.GetComponent<Renderer>().material.color;
             colour.a = 0.1f;
-            if (Time.time > inactiveDuration + 10.0f) {
+            if (Time.time > inactiveDuration + extension) {
                 gameObject.tag = activeFishTag;
                 colour.a = 1.0f;
             }
@@ -71,25 +75,6 @@ public class FishBoid : Boid {
 
     private bool Escape() {
         return Vector3.Distance(simulationCentre, transform.position) > simulationRadius;
-    }
-
-    private void SetNewDirection(float magnitude) {
-        float step = magnitude * Time.deltaTime;
-        Vector3 target = simulationCentre - transform.position;
-        Vector3 direction = Vector3.RotateTowards(transform.forward, target, step, 0.0f);
-        transform.rotation = Quaternion.LookRotation(direction);
-        transform.position = Vector3.MoveTowards(transform.position, simulationCentre, step);
-    }
-
-    private void IncrementBoidIndex() {
-        boidIndex++;
-        if (boidIndex >= boids.Length) {
-            Vector3 cohesiveForce = (cohesionStrength / Vector3.Distance(cohesionPosition, transform.position)) 
-                                  * (cohesionPosition - transform.position);
-            GetComponent<Rigidbody>().AddForce(cohesiveForce);
-            boidIndex = 0;
-            cohesionPosition = Vector3.zero;
-        }
     }
 
     private void IncrementSharkIndex() {
@@ -127,7 +112,7 @@ public class FishBoid : Boid {
                         * sharkBoids[sharkIndex].GetComponent<Rigidbody>().velocity;
         GetComponent<Rigidbody>().AddForce((transform.position - sharkPosition) * swimForce);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, 
-                             Quaternion.LookRotation(transform.position - sharkPosition), 7.0f);
+                             Quaternion.LookRotation(transform.position - sharkPosition), fleeForce);
     }
 
     private void Swim(Vector3 position, Quaternion rotation, float distance) {
@@ -141,17 +126,7 @@ public class FishBoid : Boid {
             transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, 1.0f);
             GetComponent<Rigidbody>().AddForce(transform.forward);
         } else {
-            Wander();
+            MoveForward(moveForce);
         }    
-    }
-
-    private void Wander() {
-        Vector3 randomTarget = new Vector3(Random.Range(minRange, maxRange), 
-                                           Random.Range(minRange, maxRange), 
-                                           Random.Range(minRange, maxRange));
-        Vector3 wanderVariation = randomTarget + marker.position;
-        Quaternion wanderRotation = Quaternion.LookRotation(wanderVariation);
-        transform.rotation = Quaternion.RotateTowards(transform.rotation, wanderRotation, 2.0f);
-        GetComponent<Rigidbody>().AddForce(transform.forward);
     }
 }

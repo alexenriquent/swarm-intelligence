@@ -31,4 +31,33 @@ abstract public class Boid : MonoBehaviour {
 	void Update() {
 	    BoidUpdate();
 	}
+
+    protected void SetNewDirection(float magnitude) {
+        float step = magnitude * Time.deltaTime;
+        Vector3 target = simulationCentre - transform.position;
+        Vector3 direction = Vector3.RotateTowards(transform.forward, target, step, 0.0f);
+        transform.rotation = Quaternion.LookRotation(direction);
+        transform.position = Vector3.MoveTowards(transform.position, simulationCentre, step);
+    }
+
+    protected void IncrementBoidIndex() {
+        boidIndex++;
+        if (boidIndex >= boids.Length) {
+            Vector3 cohesiveForce = (cohesionStrength / Vector3.Distance(cohesionPosition, transform.position)) 
+                                  * (cohesionPosition - transform.position);
+            GetComponent<Rigidbody>().AddForce(cohesiveForce);
+            boidIndex = 0;
+            cohesionPosition = Vector3.zero;
+        }
+    }
+
+    protected void MoveForward(float force) {
+        Vector3 randomTarget = new Vector3(Random.Range(minRange, maxRange), 
+                                           Random.Range(minRange, maxRange), 
+                                           Random.Range(minRange, maxRange));
+        Vector3 wanderVariation = randomTarget + marker.position;
+        Quaternion wanderRotation = Quaternion.LookRotation(wanderVariation);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, wanderRotation, 2.0f);
+        GetComponent<Rigidbody>().AddForce(transform.forward * force);
+    }
 }
